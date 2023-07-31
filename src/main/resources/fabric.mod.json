@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "unify",
+  "version": "${version}",
+  "name": "Unify",
+  "description": "",
+  "authors": [],
+  "contact": {
+    "repo": "https://github.com/ZayrexDev/Unify"
+  },
+  "license": "MIT",
+  "icon": "assets/Unify/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "xyz.zcraft.unify.Unify"
+    ]
+  },
+  "mixins": [
+    "Unify.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}

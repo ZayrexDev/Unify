@@ -1,0 +1,35 @@
+# ------------------
+# Unify config file
+# The default config can be found on GitHub
+# ------------------
+
+# Reject players failed to sync to join.
+# This is recommended to set to true to prevent data from being damaged.
+force-sync: true
+
+# Determined how the data is saved.
+data-storage:
+  # Data storage provider. Default is `sqlite`.
+  # Check GitHub to find out how to add your own providers.
+  provider: sqlite
+  # Parameters passing through the data storage provider.
+  parameters:
+    path: unify.db
+
+# Default sync options for Unify itself.
+default-sync-options:
+  # Whether to sync player's inventory.
+  sync-inventory: true
+  # Whether to sync player's advancements.
+  sync-advancements: false
+  # Whether to sync player's recipes.
+  sync-recipes: false
+  # Whether to sync player's statistics.
+  sync-statistics: false
+
+# Server's UUID. Should be unique between servers using the same
+# data storage. Don't modify unless the UUID is contradicted!
+server-uuid: GENERATED_UUID
+
+# Configuration file version. Do not change!
+config-version: GENERATED_VERSION
