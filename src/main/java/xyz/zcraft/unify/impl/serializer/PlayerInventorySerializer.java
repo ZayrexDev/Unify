@@ -13,8 +13,8 @@ import xyz.zcraft.unify.api.DataSerializer;
 
 public class PlayerInventorySerializer extends DataSerializer {
     @Override
-    public boolean restoreFromDataString(String data, ServerPlayerEntity player) {
-        if(data == null) return true;
+    public void restoreFromDataString(String data, ServerPlayerEntity player) {
+        if(data == null) return;
         final JSONObject inventoryData = JSON.parseObject(data);
         JSONArray mainJson = inventoryData.getJSONArray("main");
         JSONArray armorJSON = inventoryData.getJSONArray("armor");
@@ -35,10 +35,8 @@ public class PlayerInventorySerializer extends DataSerializer {
                 offHand.set(i, ItemStack.fromNbt(StringNbtReader.parse(offHandJSON.get(i).toString())));
             }
         } catch (CommandSyntaxException e) {
-            return false;
+            throw new RuntimeException(e);
         }
-
-        return true;
     }
 
     @Override

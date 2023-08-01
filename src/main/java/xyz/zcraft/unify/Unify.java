@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import xyz.zcraft.unify.api.DataSerializer;
 import xyz.zcraft.unify.api.Lockable;
 import xyz.zcraft.unify.api.StorageProvider;
+import xyz.zcraft.unify.impl.serializer.PlayerEffectSerializer;
 import xyz.zcraft.unify.impl.serializer.PlayerInventorySerializer;
 import xyz.zcraft.unify.impl.storage.SQLiteStorageProvider;
 
@@ -32,10 +33,10 @@ public class Unify implements DedicatedServerModInitializer {
             throw new RuntimeException("Failed to load config", e);
         }
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> DATA_HANDLERS.forEach((s, dataSerializer) -> {
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             long start = System.currentTimeMillis();
-            if(STORAGE_LOCKABLE != null && STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString())) {
-                while(STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString()) && System.currentTimeMillis() - start < 10 * 1000) {
+            if (STORAGE_LOCKABLE != null && STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString())) {
+                while (STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString()) && System.currentTimeMillis() - start < 10 * 1000) {
                     try {
                         Thread.sleep(500);
                     } catch (InterruptedException e) {
@@ -44,22 +45,28 @@ public class Unify implements DedicatedServerModInitializer {
                 }
             }
             if (STORAGE_LOCKABLE != null) {
-                if(STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString())) {
+                if (STORAGE_LOCKABLE.isLocked(handler.player.getUuidAsString())) {
                     handler.disconnect(Text.literal("Can't sync player data"));
                     LOG.error("Cannot sync player data for {}", handler.getPlayer().getUuidAsString());
                     return;
                 }
                 STORAGE_LOCKABLE.lock(config.getServerUUID(), handler.player.getUuidAsString());
             }
-            String dataString = STORAGE_PROVIDER.get(handler.player.getUuidAsString(), s);
-            dataSerializer.restoreFromDataString(dataString, handler.player);
-        }));
+
+            DATA_HANDLERS.forEach((s, dataSerializer) -> {
+                String dataString = STORAGE_PROVIDER.get(handler.player.getUuidAsString(), s);
+                try {
+                    dataSerializer.restoreFromDataString(dataString, handler.player);
+                } catch (RuntimeException e) {
+                    LOG.error("Failed to restore data", e);
+                    if(config.isForceSync()) handler.disconnect(Text.literal("Failed to restore player data"));
+                }
+            });
+        });
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             if(STORAGE_LOCKABLE == null || STORAGE_LOCKABLE.isLockedBy(config.getServerUUID(), handler.player.getUuidAsString())) {
-                DATA_HANDLERS.forEach((s, dataSerializer) -> {
-                    STORAGE_PROVIDER.save(handler.player.getUuidAsString(), s, dataSerializer.getDataString(handler.player));
-                });
+                DATA_HANDLERS.forEach((s, dataSerializer) -> STORAGE_PROVIDER.save(handler.player.getUuidAsString(), s, dataSerializer.getDataString(handler.player)));
                 STORAGE_LOCKABLE.unlock(config.getServerUUID(), handler.player.getUuidAsString());
             }
         });
@@ -76,7 +83,10 @@ public class Unify implements DedicatedServerModInitializer {
             }
         });
 
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> STORAGE_PROVIDER.close());
+
         STORAGE_PROVIDERS.put("sqlite", new SQLiteStorageProvider());
         DATA_HANDLERS.put("inv", new PlayerInventorySerializer());
+        DATA_HANDLERS.put("effect", new PlayerEffectSerializer());
     }
 }

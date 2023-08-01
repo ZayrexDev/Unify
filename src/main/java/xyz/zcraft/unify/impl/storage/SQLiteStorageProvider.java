@@ -14,11 +14,6 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
 
     @Override
     public void init(HashMap<String, Object> args, Set<String> fields) {
-        try {
-            Class.forName("org.sqlite.JDBC");
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Could not load database driver", e);
-        }
         if (args.get("path") == null) throw new IllegalArgumentException("No database provided");
         final String s = "jdbc:sqlite:" + FabricLoader.getInstance().getConfigDir().resolve("unify").resolve(args.get("path").toString()).toAbsolutePath();
         try {
@@ -41,16 +36,21 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
         try {
             var stmt = conn.prepareStatement("DELETE FROM " + fieldName + " WHERE uuid=?;");
             stmt.setString(1, uuid);
+
             stmt.executeUpdate();
+
             stmt.close();
+
 
             stmt = conn.prepareStatement("INSERT INTO " + fieldName + " VALUES(?,?)");
             stmt.setString(1, uuid);
             stmt.setString(2, data);
+
             stmt.executeUpdate();
+
             stmt.close();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error in saving binding data", e);
         }
     }
 
@@ -60,12 +60,22 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
             String result;
             final PreparedStatement stmt = conn.prepareStatement("SELECT data FROM " + fieldName + " WHERE uuid=?");
             stmt.setString(1, uuid);
-            final ResultSet resultSet = stmt.executeQuery();
-            result = resultSet.getString(1);
+
+            result = stmt.executeQuery().getString(1);
+
             stmt.close();
             return result;
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            conn.close();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to close connection", e);
         }
     }
 
@@ -76,7 +86,9 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
             var stmt = conn.prepareStatement("INSERT INTO lock VALUES(?,?)");
             stmt.setString(1, uuid);
             stmt.setString(2, serverUuid);
+
             stmt.executeUpdate();
+
             stmt.close();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -89,8 +101,9 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
             String result;
             final PreparedStatement stmt = conn.prepareStatement("SELECT data FROM lock WHERE uuid=?");
             stmt.setString(1, uuid);
-            final ResultSet resultSet = stmt.executeQuery();
-            result = resultSet.getString(1);
+
+            result = stmt.executeQuery().getString(1);
+
             stmt.close();
             return Objects.equals(serverUuid, result);
         } catch (SQLException e) {
@@ -103,8 +116,9 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
         try {
             final PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) FROM (SELECT data FROM lock WHERE uuid=?)");
             stmt.setString(1, uuid);
-            final ResultSet resultSet = stmt.executeQuery();
-            int row = resultSet.getInt(1);
+
+            int row = stmt.executeQuery().getInt(1);
+
             stmt.close();
             return row != 0;
         } catch (SQLException e) {
@@ -118,7 +132,9 @@ public class SQLiteStorageProvider extends StorageProvider implements Lockable {
         try {
             var stmt = conn.prepareStatement("DELETE FROM lock WHERE uuid=?;");
             stmt.setString(1, uuid);
+
             stmt.executeUpdate();
+
             stmt.close();
         } catch (SQLException e) {
             throw new RuntimeException(e);

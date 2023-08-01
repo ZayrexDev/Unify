@@ -9,4 +9,5 @@ public abstract class StorageProvider {
     public abstract void save(String uuid, String fieldName, String data);
 
     public abstract String get(String uuid, String fieldName);
+    public abstract void close();
 }
